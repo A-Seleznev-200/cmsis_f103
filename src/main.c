@@ -4,6 +4,11 @@
 #include "gpio.h"
 #include "rcc.h"
 #include "usart.h"
+#include "dwt.h"
+
+#define    DWT_CYCCNT    *(volatile uint32_t *)0xE0001004
+#define    DWT_CONTROL   *(volatile uint32_t *)0xE0001000
+#define    SCB_DEMCR     *(volatile uint32_t *)0xE000EDFC
 
 static const UARTInitStruct_t UARTInitStr = 
 {
@@ -31,14 +36,16 @@ int main(void) {
   
   for(;;) {
     portSetHigh(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-    delay(1000000);
+    DWT_Delay(1000000);
     portSetLow();
-    delay(1000000);
+    DWT_Delay(1000000);
   }
 }
 
 void init(void) {
     clockInit();
+    dwt_init();
     UART_Init(1, &UARTInitStr);
     portInit();
 }
+
