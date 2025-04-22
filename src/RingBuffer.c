@@ -4,17 +4,17 @@ void RingBuffer_Init(uint32_t capacity)
 {
 }
 
-int8_t RingBuffer_Write(RingBuffer *rb, char c)
+int8_t RingBuffer_Write(RINGBUFFER_t *rb, char c)
 {
     return 0;
 }
 
-int8_t RingBuffer_Read(RingBuffer *rb, char c)
+int8_t RingBuffer_Read(RINGBUFFER_t *rb, char c)
 {
     return 0;
 }
 
-int8_t RingBuffer_Clear(RingBuffer *rb)
+int8_t RingBuffer_Clear(RINGBUFFER_t *rb)
 {
     return 0;
 }

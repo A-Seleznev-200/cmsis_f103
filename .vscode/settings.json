@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "stm32f103x6.h": "c",
-        "main.h": "c"
+        "main.h": "c",
+        "string.h": "c"
     }
 }
