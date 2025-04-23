@@ -1,6 +1,12 @@
 #include "usart.h"
-
+#include "RingBuffer.h"
 /******************************************************************************/
+
+
+#define RXNE(UARTx)     (UARTx->SR & USART_SR_RXNE)
+#define TXE(UARTx)      (UARTx->SR & USART_SR_TXE)
+
+#define RXNEIE(UARTx)   (UARTx->CR1 & USART_CR1_RXNEIE)
 
 static void TxPinInit(__IO uint32_t *CRx, 
     uint32_t GPIO_CRL_MODEx_Pos, 
@@ -16,6 +22,8 @@ static void RxPinInit(__IO uint32_t *CRx,
 static void _uart_en(USART_TypeDef *UARTx);
 
 static int16_t _uart_init(USART_TypeDef *UARTx, const UARTInitStruct_t *init);
+static void TXEIEnable(USART_TypeDef *UARTx);
+static void TXEIDisable(USART_TypeDef *UARTx);
 /******************************************************************************/
 
 /** 
@@ -105,6 +113,32 @@ uint8_t UART_Init(uint8_t id, const UARTInitStruct_t *init)
 */
 uint8_t UART_PutC(uint8_t id, const uint8_t c)
 {
+    switch (id)
+    {
+//////////////////////////////////////////////////////
+#ifdef UART1_ENABLE
+    case 1:
+#ifdef UART1_USE_RINGBUFF
+    return RingBuffer_BytePut(rb, c);
+#else
+    if (TXE(USART1))
+    {
+        USART1->DR = c;
+        return c;
+    }
+    else { return -1; }
+#endif
+        break;
+#endif
+//////////////////////////////////////////////////////
+// #ifdef UART2_ENABLE
+//     case 2;
+// #ifdef UART2_USE_RING_BUFF
+//         return return RingBuffer_BytePut(rb, c);
+// #else
+    default:
+        break;
+    }
     return 0;
 }
 
@@ -260,3 +294,39 @@ static void _uart_en(USART_TypeDef *UARTx)
 }
 
 /******************************************************************************/
+
+
+static void TXEIEnable(USART_TypeDef *UARTx)
+{
+  UARTx->CR1 |= USART_CR1_TXEIE;
+}
+
+static void TXEIDisable(USART_TypeDef *UARTx)
+{
+  UARTx->CR1 &= ~USART_CR1_TXEIE;
+}
+
+static int8_t ring_put (IRQn_Type IRQn, 
+                        USART_TypeDef *UARTx, 
+                        uint16_t BuffLen, 
+                        RINGBUFFER_t *fifo, 
+                        uint8_t c) 
+{
+    int16_t ret;
+
+    NVIC_DisableIRQ(IRQn);
+    if ((BuffLen - RingBuffer_Available(fifo, BuffLen)) > 0)
+    {
+        RingBuffer_BytePut(fifo, c);
+        ret = c;
+        TXEIEnable(UARTx);
+    }
+    else
+    {
+        ret = -1;
+    }
+    NVIC_EnableIRQ(IRQn);
+
+    return ret;
+    
+}
