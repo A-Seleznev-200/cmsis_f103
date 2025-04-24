@@ -12,11 +12,11 @@
 
 static const UARTInitStruct_t UARTInitStr = 
 {
-  .bus_freq = 72000000,
-  .baud = 115200,
-  .data_bits = 8,
-  .stop_bits = 1,
-  .parity = 0,
+  .bus_freq = 72000000, // частота 72МГц
+  .baud = 115200,       // baudrate 115200
+  .data_bits = 8,       // количество битов
+  .stop_bits = 1,       // стоп биты
+  .parity = 0,          // четность
 };
 
 uint16_t setBit(uint16_t number, uint16_t i) {
@@ -38,7 +38,7 @@ int main(void) {
   UART_ReadBuffClear(1);
   UART_WriteBuffClear(1);
   for(;;) {
-    UART_PutC(1, c);  // TODO исправить добавление символа с буфера
+    UART_PutC(1, 'z');  // TODO исправить добавление символа с буфера
     portSetHigh(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
     delay(1000000);
     portSetLow();
