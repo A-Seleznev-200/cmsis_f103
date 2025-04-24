@@ -1,13 +1,16 @@
 #include "usart.h"
 #include "RingBuffer.h"
+// #define UART1_USE_RINGBUFF
 /******************************************************************************/
-
+#if defined(UART1_USE_RING_BUFF)
+#define RING_CODE_EN
+#endif
 
 #define RXNE(UARTx)     (UARTx->SR & USART_SR_RXNE)
 #define TXE(UARTx)      (UARTx->SR & USART_SR_TXE)
 
 #define RXNEIE(UARTx)   (UARTx->CR1 & USART_CR1_RXNEIE)
-
+static void RXNEIEnable(USART_TypeDef *UARTx);
 static void TxPinInit(__IO uint32_t *CRx, 
     uint32_t GPIO_CRL_MODEx_Pos, 
     uint32_t GPIO_CRL_CNFx_Pos);
@@ -24,7 +27,23 @@ static void _uart_en(USART_TypeDef *UARTx);
 static int16_t _uart_init(USART_TypeDef *UARTx, const UARTInitStruct_t *init);
 static void TXEIEnable(USART_TypeDef *UARTx);
 static void TXEIDisable(USART_TypeDef *UARTx);
+static int8_t ring_put (IRQn_Type IRQn, 
+    USART_TypeDef *UARTx, 
+    uint16_t BuffLen, 
+    RINGBUFFER_t *fifo, 
+    uint8_t c) ;
 /******************************************************************************/
+
+
+#ifdef UART1_USE_RING_BUFF
+
+static RINGBUFFER_t tx_fifo1;
+static uint8_t tx_buff1[UART1_TXBUFF_LENGHT];
+
+static RINGBUFFER_t rx_fifo1;
+static uint8_t rx_buff1[UART1_RXBUFF_LENGHT];
+
+#endif
 
 /** 
     @brief Инициализация UART
@@ -81,6 +100,21 @@ uint8_t UART_Init(uint8_t id, const UARTInitStruct_t *init)
             return -1;
         }
 
+#ifdef UART1_USE_RING_BUFF
+        // Инициализация буферов
+        RingBuffer_Init(&tx_fifo1, tx_buff1, UART1_TXBUFF_LENGHT, 10); // TODO fix argument cellsize
+        RingBuffer_Init(&rx_fifo1, rx_buff1, UART1_RXBUFF_LENGHT, 10); // TODO fix argument cellsize
+
+        
+        // Очистка буферов
+        RingBuffer_Clear(&tx_fifo1);
+        RingBuffer_Clear(&rx_fifo1);
+        
+        RXNEIEnable(USART1);
+        
+        NVIC_EnableIRQ(USART1_IRQn);
+#endif
+
         _uart_en(USART1);
 
         return 0;
@@ -119,7 +153,7 @@ uint8_t UART_PutC(uint8_t id, const uint8_t c)
 #ifdef UART1_ENABLE
     case 1:
 #ifdef UART1_USE_RINGBUFF
-    return RingBuffer_BytePut(rb, c);
+    return ring_put(USART1_IRQn, USART1, UART1_TXBUFF_LENGHT, &tx_fifo1, c);
 #else
     if (TXE(USART1))
     {
@@ -306,16 +340,24 @@ static void TXEIDisable(USART_TypeDef *UARTx)
   UARTx->CR1 &= ~USART_CR1_TXEIE;
 }
 
+static void RXNEIEnable(USART_TypeDef *UARTx)
+{
+  UARTx->CR1 |= USART_CR1_RXNEIE;
+}
+
 static int8_t ring_put (IRQn_Type IRQn, 
                         USART_TypeDef *UARTx, 
                         uint16_t BuffLen, 
                         RINGBUFFER_t *fifo, 
                         uint8_t c) 
 {
-    int16_t ret;
+    int16_t ret = 0;
+    uint16_t len = 0;
+
+    RingBuffer_Available(fifo, &len);
 
     NVIC_DisableIRQ(IRQn);
-    if ((BuffLen - RingBuffer_Available(fifo, BuffLen)) > 0)
+    if ((BuffLen - len) > 0)
     {
         RingBuffer_BytePut(fifo, c);
         ret = c;

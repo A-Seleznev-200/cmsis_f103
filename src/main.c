@@ -12,7 +12,7 @@
 
 static const UARTInitStruct_t UARTInitStr = 
 {
-  .bus_freq = 36000000,
+  .bus_freq = 72000000,
   .baud = 115200,
   .data_bits = 8,
   .stop_bits = 1,
@@ -33,19 +33,23 @@ void delay(__IO uint32_t tck)
 
 int main(void) {
   init();
-  
+  const uint8_t c = '1';
+
+  UART_ReadBuffClear(1);
+  UART_WriteBuffClear(1);
   for(;;) {
+    UART_PutC(1, c);  // TODO исправить добавление символа с буфера
     portSetHigh(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-    DWT_Delay(1000000);
+    delay(1000000);
     portSetLow();
-    DWT_Delay(1000000);
+    delay(1000000);
   }
 }
 
 void init(void) {
-    clockInit();
-    dwt_init();
-    UART_Init(1, &UARTInitStr);
-    portInit();
+  clockInit();
+  dwt_init();
+  UART_Init(1, &UARTInitStr);
+  portInit();
 }
 

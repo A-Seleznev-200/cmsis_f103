@@ -108,8 +108,3 @@ RINGBUFFER_STATUS RingBuf_DataWatch(RINGBUFFER_t *rb, void *data, uint16_t len)
 {
     return RINGBUFFER_OK;
 }
-
-RINGBUFFER_STATUS RingBuffer_Available(uint16_t *len, RINGBUFFER_t *rb)
-{
-    return RINGBUFFER_OK;
-}
